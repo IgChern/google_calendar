@@ -1,0 +1,69 @@
+version: '3'
+
+
+services:
+    django:
+        build: .
+        command: >
+            sh -c "
+            python manage.py makemigrations --noinput && python manage.py migrate --noinput &&
+            python manage.py runserver 0.0.0.0:8000"
+        volumes:
+            - .:/usr/src/app
+        ports:
+            - 8000:8000
+        depends_on:
+            - db
+        env_file:
+            - .env
+        networks:
+            - some_network
+    db:
+        image: postgres:13.0-alpine
+        volumes:
+            - postgres_data:/var/lib/postgresql/data/
+        ports:
+            - "5432:5432"
+        env_file:
+            - .env
+        networks:
+            - some_network
+    redis:
+        image: 'redis:alpine'
+        hostname: redis
+        command: redis-server
+        networks:
+            - some_network
+        ports:
+            - '6379:6379'
+    celery-worker:
+        build: .
+        command: celery -A calendar_proj worker -E --loglevel=info
+        depends_on:
+            - db
+            - redis
+            - django
+        env_file:
+            - .env
+        networks:
+            - some_network
+    celery-beat:
+        build: .
+        command: celery -A calendar_proj beat --loglevel=info
+        depends_on:
+            - db
+            - redis
+            - celery-worker
+            - django
+        env_file:
+            - .env
+        networks:
+            - some_network
+
+
+networks:
+    some_network:
+        driver: bridge
+
+volumes:
+    postgres_data:

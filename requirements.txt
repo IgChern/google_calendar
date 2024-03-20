@@ -1,0 +1,10 @@
+Django==4.2.7
+psycopg2==2.9.9
+python-dotenv==1.0.0
+djangorestframework==3.14.0
+tzdata==2023.3
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+redis==5.0.1
+celery==5.3.6
