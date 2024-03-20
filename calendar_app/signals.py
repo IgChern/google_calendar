@@ -17,3 +17,8 @@ def handle_event_save(sender, instance, created, **kwargs):
         else:
             instance.error = None
             instance.save()
+
+    else:
+        if instance.google_id != instance._old_google_id:
+            instance.hall.google_calendar_id = instance.google_calendar_id
+            instance.hall.save(update_fields=["google_calendar_id"])

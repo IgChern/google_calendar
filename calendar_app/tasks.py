@@ -10,7 +10,7 @@ def update_halls_and_events():
         companies = Company.objects.all()
 
         for company in companies:
-            api = GoogleCalendar(company)
+            api = GoogleCalendar()
             halls = Hall.objects.filter(company=company)
             for hall in halls:
                 hall.make_halls_calendars(api)

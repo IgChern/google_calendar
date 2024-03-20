@@ -2,7 +2,6 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from .google_client import GoogleCalendar
 from django.contrib.auth.models import User
-from .google_client import GoogleCalendar
 
 
 # Create your models here.
@@ -49,8 +48,8 @@ class Event(models.Model):
     )
     hall = models.ForeignKey(Hall, on_delete=models.CASCADE, related_name="hall_events")
     google_id = models.CharField(_("event ID"), max_length=255, blank=True)
-    date_start = models.DateTimeField()
-    date_end = models.DateTimeField()
+    date_start = models.DateTimeField(blank=True)
+    date_end = models.DateTimeField(blank=True)
     error = models.BooleanField(default=None)
 
     def __str__(self):
@@ -72,12 +71,15 @@ class Event(models.Model):
                 company=self.company,
                 hall=self.hall,
                 google_id=event["id"],
+                defaults={
+                    "date_start": event["start"].get("dateTime"),
+                    "date_end": event["end"].get("dateTime"),
+                },
             )
-            if (
-                created
-                or event_obj.date_start != event["start"].get("dateTime")
-                or event_obj.date_end != event["end"].get("dateTime")
-            ):
+            if not created:
+                event_obj.company = self.company
+                event_obj.hall = self.hall
+                event_obj.google_id = event["id"]
                 event_obj.date_start = event["start"].get("dateTime")
                 event_obj.date_end = event["end"].get("dateTime")
                 event_obj.save()

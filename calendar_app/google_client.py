@@ -8,28 +8,37 @@ import json
 
 
 class GoogleCalendar:
-    SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
+    SCOPES = [
+        "https://www.googleapis.com/auth/calendar",
+        "https://www.googleapis.com/auth/calendar.events",
+    ]
 
-    def __init__(self, company) -> None:
-        self.credentials = self.get_credentials(company)
-        self.service = build("calendar", "v3", credentials=self.credentials)
+    def __init__(self, credentials_file=settings.GOOGLE_TOKEN) -> None:
+        self.creds = self.get_creds(credentials_file)
+        self.service = build(
+            "calendar", "v3", credentials=self.creds, cache_discovery=False
+        )
 
-    def get_credentials(self, company):
-        creds = None
-        if company.google_token:
-            creds = Credentials(company.google_token)
-        elif company.credentials:
-            creds = Credentials.from_authorized_user_info(
-                json.loads(company.credentials), self.SCOPES
+    def get_creds(self, credentials_file):
+        if os.path.exists(credentials_file):
+            creds = Credentials.from_authorized_user_file(credentials_file, self.SCOPES)
+            if not creds or not creds.valid:
+                if creds and creds.expired and creds.refresh_token:
+                    creds.refresh(Request())
+                else:
+                    flow = InstalledAppFlow.from_client_secrets_file(
+                        settings.GOOGLE_CREDENTIALS, self.SCOPES
+                    )
+                    creds = flow.run_local_server(port=0)
+                with open("token.json", "w") as token:
+                    token.write(creds.to_json())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                settings.GOOGLE_CREDENTIALS, self.SCOPES
             )
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    settings.GOOGLE_CREDENTIALS, self.SCOPES
-                )
-                creds = flow.run_local_server(port=0, open_browser=False)
+            creds = flow.run_local_server(port=0)
+            with open(credentials_file, "w") as token:
+                token.write(creds.to_json())
         return creds
 
     def get_calendars_list(self):

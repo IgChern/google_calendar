@@ -148,7 +148,8 @@ REST_FRAMEWORK = {
 }
 
 GOOGLE_CREDENTIALS = "./calendar_app/credentials/credentials.json"
-GOOGLE_TOKEN = "calendar_app/credentials/token.json"
+GOOGLE_TOKEN = "./calendar_app/credentials/token.json"
+GOOGLE_SERVICEACC = "./calendar_app/credentials/serv_acc.json"
 
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.environ.get(
