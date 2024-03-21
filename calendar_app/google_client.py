@@ -4,7 +4,9 @@ from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 from django.conf import settings
 import os.path
-import json
+import logging
+
+logger = logging.getLogger("django_app")
 
 
 class GoogleCalendar:
@@ -42,7 +44,13 @@ class GoogleCalendar:
         return creds
 
     def get_calendars_list(self):
-        return self.service.calendarList().list().execute().get("items", [])
+        response = self.service.calendarList().list().execute().get("items", [])
+        logger.info(response)
+        return response
 
     def get_events(self, cal_id="primary"):
-        return self.service.events().list(calendarId=cal_id).execute().get("items", [])
+        response = (
+            self.service.events().list(calendarId=cal_id).execute().get("items", [])
+        )
+        logger.info(response)
+        return response

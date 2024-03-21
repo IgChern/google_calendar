@@ -147,7 +147,6 @@ REST_FRAMEWORK = {
 
 GOOGLE_CREDENTIALS = "./calendar_app/credentials/credentials.json"
 GOOGLE_TOKEN = "./calendar_app/credentials/token.json"
-GOOGLE_SERVICEACC = "./calendar_app/credentials/serv_acc.json"
 MAX_COMPANIES = 1
 IMPORT_TIME = 10
 
@@ -155,8 +154,7 @@ CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/
 CELERY_RESULT_BACKEND = os.environ.get(
     "CELERY_RESULT_BACKEND", "redis://localhost:6379/0"
 )
-# CELERY_TASK_ALWAYS_EAGER = True
-# CELERY_TASK_EAGER_PROPAGATES = True
+
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
@@ -167,5 +165,59 @@ CELERY_BEAT_SCHEDULE = {
         "task": "calendar_app.tasks.update_halls_and_events",
         "schedule": IMPORT_TIME,
         "kwargs": {"max_companies": MAX_COMPANIES},
+    },
+}
+
+
+LOGGER_FOLDER = os.path.join(BASE_DIR, "logs")
+
+if not os.path.exists(LOGGER_FOLDER):
+    os.makedirs(LOGGER_FOLDER)
+
+LOGGING = {
+    "version": 1,
+    "formatters": {
+        "verbose": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"},
+    },
+    "handlers": {
+        "django": {
+            "level": "INFO",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": os.path.join(LOGGER_FOLDER, "logs.log"),
+            "formatter": "verbose",
+            "delay": False,
+            "encoding": "utf-8",
+        },
+        "tasks_file": {
+            "level": "INFO",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": os.path.join(LOGGER_FOLDER, "tasks.log"),
+            "formatter": "verbose",
+            "delay": False,
+            "encoding": "utf-8",
+        },
+        "console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "django_app": {
+            "handlers": [
+                "django",
+                "console",
+            ],
+            "level": "INFO",
+            "propagate": True,
+        },
+        "celery_tasks": {
+            "handlers": [
+                "tasks_file",
+                "console",
+            ],
+            "level": "INFO",
+            "propagate": True,
+        },
     },
 }
