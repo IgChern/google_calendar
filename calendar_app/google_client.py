@@ -32,8 +32,6 @@ class GoogleCalendar:
                         settings.GOOGLE_CREDENTIALS, self.SCOPES
                     )
                     creds = flow.run_local_server(port=0)
-                with open("token.json", "w") as token:
-                    token.write(creds.to_json())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
                 settings.GOOGLE_CREDENTIALS, self.SCOPES
