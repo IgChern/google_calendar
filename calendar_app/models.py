@@ -2,7 +2,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from .google_client import GoogleCalendar
 from django.contrib.auth.models import User
-from django.db import transaction
+from django.db.models.query_utils import Q
 
 
 # Create your models here.
@@ -62,8 +62,12 @@ class Hall(models.Model):
                     event_obj.company = self.company
                     event_obj.hall = self
                     event_obj.google_id = event["id"]
-                    event_obj.date_start = event["start"].get("dateTime")
-                    event_obj.date_end = event["end"].get("dateTime")
+                    if (
+                        event_obj.date_start is not None
+                        and event_obj.date_end is not None
+                    ):
+                        event_obj.date_start = event["start"].get("dateTime")
+                        event_obj.date_end = event["end"].get("dateTime")
                 event_obj.save()
         except Exception as e:
             print(f"Error updating hall {self.name}: {e}")
@@ -77,16 +81,34 @@ class Event(models.Model):
     google_id = models.CharField(_("event ID"), max_length=255, blank=True)
     date_start = models.DateTimeField(blank=True, null=True)
     date_end = models.DateTimeField(blank=True, null=True)
-    error = models.BooleanField(default=False)
+    error = models.IntegerField(default=0)
 
     def __str__(self):
         return f"{self.hall} - {self.date_start} - {self.date_end}"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._old_google_id = self.google_id
-
     def save(self, *args, **kwargs):
-        if self.google_id != self._old_google_id:
-            self._old_google_id = self.google_id
+        # self.check_overlapping_events()
         super().save(*args, **kwargs)
+
+    def check_overlapping_events(self):
+        events = Event.objects.filter(hall=self.hall).order_by("date_start")
+        events.update(error=0)
+
+        active_events = []
+        overlapping_events = []
+        for event in events:
+            active_events = [
+                ev for ev in active_events if ev.date_end > event.date_start
+            ]
+
+            for active_event in active_events:
+                if event.date_end > active_event.date_start:
+                    overlapping_events.append(event)
+                    overlapping_events.append(active_event)
+                    self.error = 1
+
+            active_events.append(event)
+
+        Event.objects.filter(pk__in=[event.pk for event in overlapping_events]).update(
+            error=1
+        )

@@ -1,7 +1,6 @@
 from celery import shared_task
-from .models import Company, Hall
+from .models import Company, Hall, Event
 from .google_client import GoogleCalendar
-from .helpers import save_events_to_database
 
 
 @shared_task
@@ -18,6 +17,9 @@ def update_halls_and_events(max_companies=None):
             halls = Hall.objects.filter(company=company)
             for hall in halls:
                 hall.update_hall(api)
+                events = Event.objects.filter(hall=hall)
+                for event in events:
+                    event.check_overlapping_events()
 
     except Exception as e:
         print(f"Ошибка при обновлении залов и событий: {e}")

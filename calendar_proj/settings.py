@@ -42,8 +42,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "calendar_app",
-    "rest_framework",
-    "rest_framework.authtoken",
 ]
 
 MIDDLEWARE = [
@@ -151,7 +149,7 @@ GOOGLE_CREDENTIALS = "./calendar_app/credentials/credentials.json"
 GOOGLE_TOKEN = "./calendar_app/credentials/token.json"
 GOOGLE_SERVICEACC = "./calendar_app/credentials/serv_acc.json"
 MAX_COMPANIES = 1
-IMPORT_TIME = 120
+IMPORT_TIME = 10
 
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.environ.get(
