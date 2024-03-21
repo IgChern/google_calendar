@@ -37,7 +37,7 @@ https://console.cloud.google.com/apis/credentials/consent
 ### 5. Получение token.json:
 1. Настройте виртуальное окружение  
 python3 -m venv venv  
-source venv/bin/activate
+source venv/bin/activate  
 pip3 install -r requirements.txt 
 2. Запустите файл /calendar_app/credentials/oauth2.py
 3. После открытия браузера, выполните аутентификацию со своего аккаунта Google
