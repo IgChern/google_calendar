@@ -150,6 +150,8 @@ REST_FRAMEWORK = {
 GOOGLE_CREDENTIALS = "./calendar_app/credentials/credentials.json"
 GOOGLE_TOKEN = "./calendar_app/credentials/token.json"
 GOOGLE_SERVICEACC = "./calendar_app/credentials/serv_acc.json"
+MAX_COMPANIES = 1
+IMPORT_TIME = 120
 
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.environ.get(
@@ -165,6 +167,7 @@ CELERY_IMPORTS = ("calendar_app.tasks",)
 CELERY_BEAT_SCHEDULE = {
     "period_task": {
         "task": "calendar_app.tasks.update_halls_and_events",
-        "schedule": 10.0,
+        "schedule": IMPORT_TIME,
+        "kwargs": {"max_companies": MAX_COMPANIES},
     },
 }
