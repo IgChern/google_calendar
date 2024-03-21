@@ -4,7 +4,6 @@ from .google_client import GoogleCalendar
 import logging
 
 logger = logging.getLogger("celery_tasks")
-logger.propagate = False
 
 
 @shared_task

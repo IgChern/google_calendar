@@ -2,7 +2,6 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from .google_client import GoogleCalendar
 from django.contrib.auth.models import User
-from django.db.models.query_utils import Q
 
 
 # Create your models here.
@@ -15,9 +14,6 @@ class Company(models.Model):
     name = models.CharField(_("Company Name"), max_length=255)
     google_token = models.CharField(_("Google Token"), max_length=255, blank=True)
     credentials = models.TextField(_("Credentials"), null=True, blank=True)
-
-    def __str__(self):
-        return self.name
 
     def update_company(self, api: GoogleCalendar):
         try:
@@ -32,6 +28,13 @@ class Company(models.Model):
         except Exception as e:
             print(f"Error updating company {self.name}: {e}")
 
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = _("Company")
+        verbose_name_plural = _("Companies")
+
 
 class Hall(models.Model):
     company = models.ForeignKey(
@@ -41,9 +44,6 @@ class Hall(models.Model):
     google_calendar_id = models.CharField(
         _("Google calendar ID"), max_length=255, blank=True
     )
-
-    def __str__(self):
-        return self.name
 
     def update_hall(self, api: GoogleCalendar):
         try:
@@ -72,23 +72,23 @@ class Hall(models.Model):
         except Exception as e:
             print(f"Error updating hall {self.name}: {e}")
 
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = _("Hall")
+        verbose_name_plural = _("Halls")
+
 
 class Event(models.Model):
     company = models.ForeignKey(
         Company, on_delete=models.CASCADE, related_name="company_events"
     )
     hall = models.ForeignKey(Hall, on_delete=models.CASCADE, related_name="hall_events")
-    google_id = models.CharField(_("event ID"), max_length=255, blank=True)
+    google_id = models.CharField(_("Event ID"), max_length=255, blank=True)
     date_start = models.DateTimeField(blank=True, null=True)
     date_end = models.DateTimeField(blank=True, null=True)
     error = models.IntegerField(default=0)
-
-    def __str__(self):
-        return f"{self.hall} - {self.date_start} - {self.date_end}"
-
-    def save(self, *args, **kwargs):
-        # self.check_overlapping_events()
-        super().save(*args, **kwargs)
 
     def check_overlapping_events(self):
         events = Event.objects.filter(hall=self.hall).order_by("date_start")
@@ -112,3 +112,10 @@ class Event(models.Model):
         Event.objects.filter(pk__in=[event.pk for event in overlapping_events]).update(
             error=1
         )
+
+    def __str__(self):
+        return f"{self.hall} - {self.date_start} - {self.date_end}"
+
+    class Meta:
+        verbose_name = _("Event")
+        verbose_name_plural = _("Events")
