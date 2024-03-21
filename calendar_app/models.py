@@ -2,6 +2,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from .google_client import GoogleCalendar
 from django.contrib.auth.models import User
+from django.db import transaction
 
 
 # Create your models here.
@@ -18,6 +19,19 @@ class Company(models.Model):
     def __str__(self):
         return self.name
 
+    def update_company(self, api: GoogleCalendar):
+        try:
+            response_list = api.get_calendars_list()
+            for calendar in response_list:
+                hall, created = Hall.objects.get_or_create(
+                    company=self,
+                    name=calendar["summary"],
+                    google_calendar_id=calendar["id"],
+                )
+                hall.save
+        except Exception as e:
+            print(f"Error updating company {self.name}: {e}")
+
 
 class Hall(models.Model):
     company = models.ForeignKey(
@@ -31,15 +45,28 @@ class Hall(models.Model):
     def __str__(self):
         return self.name
 
-    def make_halls_calendars(self, api: GoogleCalendar):
-        response_list = api.get_calendars_list()
-        for calendar in response_list:
-            hall, created = Hall.objects.get_or_create(
-                company=self.company, google_calendar_id=calendar["id"]
-            )
-            hall.name = calendar.get("summary")
-            hall.google_calendar_id = calendar.get("id")
-            hall.save()
+    def update_hall(self, api: GoogleCalendar):
+        try:
+            response_list = api.get_events(self.google_calendar_id)
+            for event in response_list:
+                event_obj, created = Event.objects.get_or_create(
+                    hall=self,
+                    company=self.company,
+                    google_id=event["id"],
+                    defaults={
+                        "date_start": event["start"].get("dateTime"),
+                        "date_end": event["end"].get("dateTime"),
+                    },
+                )
+                if not created:
+                    event_obj.company = self.company
+                    event_obj.hall = self
+                    event_obj.google_id = event["id"]
+                    event_obj.date_start = event["start"].get("dateTime")
+                    event_obj.date_end = event["end"].get("dateTime")
+                event_obj.save()
+        except Exception as e:
+            print(f"Error updating hall {self.name}: {e}")
 
 
 class Event(models.Model):
@@ -48,9 +75,9 @@ class Event(models.Model):
     )
     hall = models.ForeignKey(Hall, on_delete=models.CASCADE, related_name="hall_events")
     google_id = models.CharField(_("event ID"), max_length=255, blank=True)
-    date_start = models.DateTimeField(blank=True)
-    date_end = models.DateTimeField(blank=True)
-    error = models.BooleanField(default=None)
+    date_start = models.DateTimeField(blank=True, null=True)
+    date_end = models.DateTimeField(blank=True, null=True)
+    error = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.hall} - {self.date_start} - {self.date_end}"
@@ -63,23 +90,3 @@ class Event(models.Model):
         if self.google_id != self._old_google_id:
             self._old_google_id = self.google_id
         super().save(*args, **kwargs)
-
-    def make_halls_events(self, api: GoogleCalendar):
-        response_list = api.get_events(self.hall.google_calendar_id)
-        for event in response_list:
-            event_obj, created = Event.objects.get_or_create(
-                company=self.company,
-                hall=self.hall,
-                google_id=event["id"],
-                defaults={
-                    "date_start": event["start"].get("dateTime"),
-                    "date_end": event["end"].get("dateTime"),
-                },
-            )
-            if not created:
-                event_obj.company = self.company
-                event_obj.hall = self.hall
-                event_obj.google_id = event["id"]
-                event_obj.date_start = event["start"].get("dateTime")
-                event_obj.date_end = event["end"].get("dateTime")
-                event_obj.save()

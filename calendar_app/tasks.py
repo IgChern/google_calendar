@@ -7,16 +7,14 @@ from .helpers import save_events_to_database
 @shared_task
 def update_halls_and_events():
     try:
+        api = GoogleCalendar()
         companies = Company.objects.all()
 
         for company in companies:
-            api = GoogleCalendar()
+            company.update_company(api)
             halls = Hall.objects.filter(company=company)
             for hall in halls:
-                hall.make_halls_calendars(api)
-                events = Event.objects.filter(company=company, hall=hall)
-                for event in events:
-                    event.make_halls_events(api)
+                hall.update_hall(api)
 
     except Exception as e:
-        print(f"Error updating halls and events: {e}")
+        print(f"Ошибка при обновлении залов и событий: {e}")
