@@ -1,33 +1,49 @@
-from celery import shared_task
-from .models import Company, Hall, Event
-from .google_client import GoogleCalendar
 import logging
+
+from celery import shared_task
+from django.conf import settings
+from django.utils import timezone
+
+from .google_client import GoogleCalendar
+from .models import Company, Event, Hall
 
 logger = logging.getLogger("celery_tasks")
 
 
+@shared_task(bind=True)
+def sync_company_calendars(self, max_companies=None):
+
+    for company in Company.objects.all()[:max_companies]:
+        company.last_update = timezone.now()
+        company.save()
+        update_halls_and_events.apply_async(
+            kwargs={"company_id": company.pk},
+            time_limit=settings.IMPORT_TIME,
+        )
+        logger.info(f"Updating halls for company: {company.name}")
+
+
 @shared_task
-def update_halls_and_events(max_companies=None):
-    try:
-        api = GoogleCalendar()
-        if max_companies:
-            companies = Company.objects.all()[:max_companies]
-        else:
-            companies = Company.objects.all()
+def update_halls_and_events(company_id=None):
 
-        for company in companies:
-            company.update_company(api)
-            halls = Hall.objects.filter(company=company)
-            logger.info(f"Updating halls for company: {company.name}")
-            for hall in halls:
-                hall.update_hall(api)
-                logger.info(f"Updating hall: {hall.name}")
-                events = Event.objects.filter(hall=hall)
-                for event in events:
-                    event.check_overlapping_events()
-                    logger.info(
-                        f"Checking overlapping events for event: {event.google_id}"
-                    )
+    api = GoogleCalendar()
+    company = Company.objects.get(pk=company_id)
+    company.update_company(api)
+    company.last_update = timezone.now()
+    company.save()
 
-    except Exception as e:
-        print(f"Ошибка при обновлении залов и событий: {e}")
+    halls = Hall.objects.filter(hall_company=company)
+    logger.info(f"Updating halls for company: {company.name}")
+
+    for hall in halls:
+        hall.update_hall(api)
+        hall.last_update = timezone.now()
+        hall.save()
+        logger.info(f"Updating hall: {hall.name}")
+
+        events = Event.objects.filter(event_hall=hall)
+        for event in events:
+            event.check_overlapping_events()
+            event.last_update = timezone.now()
+            event.save()
+            logger.info(f"Checking overlapping events for event: {event.google_id}")

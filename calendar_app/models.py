@@ -1,30 +1,38 @@
+from django.contrib.auth.models import User
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+
 from .google_client import GoogleCalendar
-from django.contrib.auth.models import User
 
 
-# Create your models here.
+class GoogleModel(models.Model):
+    last_update = models.DateTimeField(_("Last Update"), null=True, blank=True)
+    sync_token = models.CharField(
+        _("Sync Token"), blank=True, default="", max_length=255
+    )
 
 
-class Company(models.Model):
+class Company(GoogleModel):
     user = models.OneToOneField(
         User, related_name="user", on_delete=models.CASCADE, default=""
     )
     name = models.CharField(_("Company Name"), max_length=255)
-    google_token = models.CharField(_("Google Token"), max_length=255, blank=True)
-    credentials = models.TextField(_("Credentials"), null=True, blank=True)
 
     def update_company(self, api: GoogleCalendar):
         try:
             response_list = api.get_calendars_list()
-            for calendar in response_list:
+            for calendar in response_list.get("items", []):
                 hall, created = Hall.objects.get_or_create(
-                    company=self,
+                    hall_company=self,
                     name=calendar["summary"],
                     google_calendar_id=calendar["id"],
                 )
                 hall.save
+
+            sync_token = response_list.get("nextSyncToken", "")
+            self.sync_token = sync_token
+            self.save()
+
         except Exception as e:
             print(f"Error updating company {self.name}: {e}")
 
@@ -36,8 +44,8 @@ class Company(models.Model):
         verbose_name_plural = _("Companies")
 
 
-class Hall(models.Model):
-    company = models.ForeignKey(
+class Hall(GoogleModel):
+    hall_company = models.ForeignKey(
         Company, on_delete=models.CASCADE, related_name="company_halls"
     )
     name = models.CharField(_("Hall name"), max_length=255)
@@ -48,10 +56,10 @@ class Hall(models.Model):
     def update_hall(self, api: GoogleCalendar):
         try:
             response_list = api.get_events(self.google_calendar_id)
-            for event in response_list:
+            for event in response_list.get("items", []):
                 event_obj, created = Event.objects.get_or_create(
-                    hall=self,
-                    company=self.company,
+                    event_hall=self,
+                    event_company=self.hall_company,
                     google_id=event["id"],
                     defaults={
                         "date_start": event["start"].get("dateTime"),
@@ -59,8 +67,8 @@ class Hall(models.Model):
                     },
                 )
                 if not created:
-                    event_obj.company = self.company
-                    event_obj.hall = self
+                    event_obj.event_company = self.hall_company
+                    event_obj.event_hall = self
                     event_obj.google_id = event["id"]
                     if (
                         event_obj.date_start is not None
@@ -69,6 +77,10 @@ class Hall(models.Model):
                         event_obj.date_start = event["start"].get("dateTime")
                         event_obj.date_end = event["end"].get("dateTime")
                 event_obj.save()
+
+            sync_token = response_list.get("nextSyncToken", "")
+            self.sync_token = sync_token
+            self.save()
         except Exception as e:
             print(f"Error updating hall {self.name}: {e}")
 
@@ -80,18 +92,20 @@ class Hall(models.Model):
         verbose_name_plural = _("Halls")
 
 
-class Event(models.Model):
-    company = models.ForeignKey(
+class Event(GoogleModel):
+    event_company = models.ForeignKey(
         Company, on_delete=models.CASCADE, related_name="company_events"
     )
-    hall = models.ForeignKey(Hall, on_delete=models.CASCADE, related_name="hall_events")
+    event_hall = models.ForeignKey(
+        Hall, on_delete=models.CASCADE, related_name="hall_events"
+    )
     google_id = models.CharField(_("Event ID"), max_length=255, blank=True)
     date_start = models.DateTimeField(blank=True, null=True)
     date_end = models.DateTimeField(blank=True, null=True)
     error = models.IntegerField(default=0)
 
     def check_overlapping_events(self):
-        events = Event.objects.filter(hall=self.hall).order_by("date_start")
+        events = Event.objects.filter(event_hall=self.event_hall).order_by("date_start")
         events.update(error=0)
 
         active_events = []
@@ -105,7 +119,6 @@ class Event(models.Model):
                 if event.date_end > active_event.date_start:
                     overlapping_events.append(event)
                     overlapping_events.append(active_event)
-                    self.error = 1
 
             active_events.append(event)
 
@@ -114,7 +127,7 @@ class Event(models.Model):
         )
 
     def __str__(self):
-        return f"{self.hall} - {self.date_start} - {self.date_end}"
+        return f"{self.event_hall} - {self.date_start} - {self.date_end}"
 
     class Meta:
         verbose_name = _("Event")

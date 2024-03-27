@@ -14,8 +14,9 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-from dotenv import load_dotenv
 import os
+
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -24,7 +25,7 @@ load_dotenv()
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-89bfs$@lra6b-53kcaj9b#7w%pw19aloa113(&x%o8_b*5gosk"
+SECRET_KEY = os.environ.get("SECRET_KEY", "secret")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -80,13 +81,13 @@ WSGI_APPLICATION = "calendar_proj.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
-        "NAME": os.environ.get("POSTGRES_NAME", "postgres"),
-        "USER": os.environ.get("POSTGRES_USER", "postgres"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "postgres"),
-        "HOST": os.environ.get("POSTGRES_HOST", "db"),
-        "PORT": os.environ.get("POSTGRES_PORT", 5432),
-    }
+        "ENGINE": os.environ.get("MYSQL_ENGINE", "django.db.backends.mysql"),
+        "NAME": os.environ.get("MYSQL_DATABASE", "mysql_name"),
+        "USER": os.environ.get("MYSQL_USER", "mysql_user"),
+        "PASSWORD": os.environ.get("MYSQL_PASSWORD", "mysql_password"),
+        "HOST": os.environ.get("MYSQL_HOST", "db"),
+        "PORT": os.environ.get("MYSQL_PORT", "3306"),
+    },
 }
 
 
@@ -133,27 +134,13 @@ STATIC_URL = "/static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-REST_FRAMEWORK = {
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
-    "PAGE_SIZE": 5,
-    "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.TokenAuthentication",
-    ),
-}
-
 GOOGLE_CREDENTIALS = "./calendar_app/credentials/credentials.json"
 GOOGLE_TOKEN = "./calendar_app/credentials/token.json"
 MAX_COMPANIES = 1
 IMPORT_TIME = 120
 
-CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = os.environ.get(
-    "CELERY_RESULT_BACKEND", "redis://localhost:6379/0"
-)
+CELERY_BROKER_URL = "redis://redis:6379/0"
+CELERY_RESULT_BACKEND = "redis://redis:6379/0"
 
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
@@ -162,7 +149,7 @@ CELERY_TIMEZONE = "UTC"
 CELERY_IMPORTS = ("calendar_app.tasks",)
 CELERY_BEAT_SCHEDULE = {
     "period_task": {
-        "task": "calendar_app.tasks.update_halls_and_events",
+        "task": "calendar_app.tasks.sync_company_calendars",
         "schedule": IMPORT_TIME,
         "kwargs": {"max_companies": MAX_COMPANIES},
     },
@@ -182,7 +169,7 @@ LOGGING = {
     "handlers": {
         "django": {
             "level": "INFO",
-            "class": "logging.handlers.RotatingFileHandler",
+            "class": "logging.FileHandler",
             "filename": os.path.join(LOGGER_FOLDER, "logs.log"),
             "formatter": "verbose",
             "delay": False,
@@ -190,8 +177,8 @@ LOGGING = {
         },
         "tasks_file": {
             "level": "INFO",
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": os.path.join(LOGGER_FOLDER, "tasks.log"),
+            "class": "logging.FileHandler",
+            "filename": os.path.join(LOGGER_FOLDER, "celery_tasks.log"),
             "formatter": "verbose",
             "delay": False,
             "encoding": "utf-8",

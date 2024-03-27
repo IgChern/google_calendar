@@ -17,13 +17,13 @@
 
 ### 3. Создайте файл .env со своими собственными настройками:
 
-    POSTGRES_NAME=<your_settings>
-    POSTGRES_USER=<your_settings>
-    POSTGRES_PASSWORD=<your_settings>
-    POSTGRES_HOST=<your_settings>
-    POSTGRES_PORT=<your_settings>
-    CELERY_BROKER_URL=<your_settings>
-    CELERY_RESULT_BACKEND=<your_settings>
+    MYSQL_ENGINE=<your_settings>
+    MYSQL_DATABASE=<your_settings>
+    MYSQL_USER=<your_settings>
+    MYSQL_PASSWORD=<your_settings>
+    MYSQL_ROOT_PASSWORD=<your_settings>
+    MYSQL_HOST=<your_settings>
+    MYSQL_PORT=<your_settings>
 
 ### 4. Работа с Google API:  
 1. Создайте проект Google Cloud  
@@ -43,7 +43,7 @@ https://console.cloud.google.com/apis/credentials/consent
 
     pip3 install -r requirements.txt
 
-1. Запустите файл /calendar_app/credentials/oauth2.py
+1. Запустите файл calendar_app/credentials/oauth2.py
 2. После открытия браузера, выполните аутентификацию со своего аккаунта Google
 3. Сообщение об успешной операции: The authentication flow has completed. You may close this window.
 4. Файл token.json появится в /calendar_app/credentials/
@@ -57,7 +57,7 @@ https://console.cloud.google.com/apis/credentials/consent
 
     docker ps
 
-    docker exec -it <ID_bank_api-django> python manage.py createsuperuser
+    docker exec -it <ID-django-app> python manage.py createsuperuser
 
 ### 7. Создание компании
 Перейдите в админ панель и создайте компанию, доступные холлы(календари) и ивенты для холла подтянутся из Google Calendar в течение 120 секунд.

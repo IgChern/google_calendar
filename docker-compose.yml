@@ -1,6 +1,5 @@
 version: '3'
 
-
 services:
     django:
         build: .
@@ -19,11 +18,12 @@ services:
         networks:
             - some_network
     db:
-        image: postgres:13.0-alpine
+        image: mysql:8.0.36
         volumes:
-            - postgres_data:/var/lib/postgresql/data/
+        - mysql_data:/var/lib/mysql
+        restart: always
         ports:
-            - "5432:5432"
+            - "33333:3306"
         env_file:
             - .env
         networks:
@@ -60,10 +60,9 @@ services:
         networks:
             - some_network
 
-
 networks:
     some_network:
         driver: bridge
 
 volumes:
-    postgres_data:
+    mysql_data:

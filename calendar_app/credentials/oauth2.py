@@ -1,11 +1,12 @@
-from googleapiclient.discovery import build
 import os.path
-from google.oauth2.credentials import Credentials
+
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
 
 
-class GoogleCalendar:
+class GoogleEntry:
     SCOPES = [
         "https://www.googleapis.com/auth/calendar",
         "https://www.googleapis.com/auth/calendar.events",
@@ -38,4 +39,4 @@ class GoogleCalendar:
         return creds
 
 
-obj = GoogleCalendar()
+obj = GoogleEntry()

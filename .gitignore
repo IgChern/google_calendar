@@ -2,6 +2,7 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=django,python
 
 ### Django ###
+logs
 *.log
 *.pot
 *.pyc
@@ -10,6 +11,8 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 media
+calendar_app/credentials/credentials.json
+calendar_app/credentials/token.json
 
 
 # If your build process includes running collectstatic, then you probably don't need or want to include staticfiles/
