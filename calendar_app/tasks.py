@@ -11,9 +11,9 @@ logger = logging.getLogger("celery_tasks")
 
 
 @shared_task(bind=True)
-def sync_company_calendars(self, max_companies=None):
+def sync_company_calendars(self):
 
-    for company in Company.objects.all()[:max_companies]:
+    for company in Company.objects.all():
         company.last_update = timezone.now()
         company.save()
         update_halls_and_events.apply_async(
@@ -25,13 +25,11 @@ def sync_company_calendars(self, max_companies=None):
 
 @shared_task
 def update_halls_and_events(company_id=None):
-
     api = GoogleCalendar()
     company = Company.objects.get(pk=company_id)
     company.update_company(api)
     company.last_update = timezone.now()
     company.save()
-
     halls = Hall.objects.filter(hall_company=company)
     logger.info(f"Updating halls for company: {company.name}")
 
@@ -42,7 +40,9 @@ def update_halls_and_events(company_id=None):
         logger.info(f"Updating hall: {hall.name}")
 
         events = Event.objects.filter(event_hall=hall)
+
         for event in events:
+
             event.check_overlapping_events()
             event.last_update = timezone.now()
             event.save()

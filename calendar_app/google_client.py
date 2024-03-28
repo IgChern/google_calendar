@@ -20,12 +20,16 @@ class GoogleCalendar(GoogleEntry):
             "calendar", "v3", credentials=self.creds, cache_discovery=False
         )
 
-    def get_calendars_list(self):
-        response = self.service.calendarList().list().execute()
+    def get_calendars_list(self, sync_token=None):
+        response = self.service.calendarList().list(syncToken=sync_token).execute()
         logger.info(response)
         return response
 
-    def get_events(self, cal_id="primary"):
-        response = self.service.events().list(calendarId=cal_id).execute()
+    def get_events(self, cal_id, sync_token=None):
+        response = (
+            self.service.events()
+            .list(calendarId=cal_id, syncToken=sync_token)
+            .execute()
+        )
         logger.info(response)
         return response
