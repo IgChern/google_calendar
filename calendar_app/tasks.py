@@ -11,7 +11,7 @@ logger = logging.getLogger("celery_tasks")
 
 
 @shared_task(bind=True)
-def sync_company_calendars(self):
+def sync_company_calendars():
 
     for company in Company.objects.all():
         company.last_update = timezone.now()

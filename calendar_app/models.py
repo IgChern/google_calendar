@@ -1,4 +1,3 @@
-from dateutil.parser import parse
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -11,9 +10,9 @@ class GoogleModel(models.Model):
     sync_token = models.CharField(
         _("Sync Token"), blank=True, default="", max_length=255
     )
-    page_token = models.CharField(
-        _("Page Token"), blank=True, default="", max_length=255
-    )
+
+    class Meta:
+        abstract = True
 
 
 class Company(GoogleModel):
@@ -25,7 +24,7 @@ class Company(GoogleModel):
     def update_company(self, api: GoogleCalendar, page_token=None):
         try:
             response_list = api.get_calendars_list(
-                sync_token=self.sync_token, page_token=self.page_token
+                sync_token=self.sync_token, page_token=page_token
             )
             for calendar in response_list.get("items", []):
                 hall, created = Hall.objects.get_or_create(
@@ -33,16 +32,15 @@ class Company(GoogleModel):
                     name=calendar["summary"],
                     google_calendar_id=calendar["id"],
                 )
-                hall.save
+                hall.save()
+
+            page_token = response_list.get("nextPageToken", None)
+            if page_token:
+                self.update_company(api, page_token=page_token)
 
             sync_token = response_list.get("nextSyncToken", "")
             self.sync_token = sync_token
             self.save()
-
-            page_token = response_list.get("nextPageToken", None)
-            if page_token is not None:
-                self.page_token = page_token
-                self.save()
 
         except Exception as e:
             print(f"Error updating company {self.name}: {e}")
@@ -69,7 +67,7 @@ class Hall(GoogleModel):
             response_list = api.get_events(
                 cal_id=self.google_calendar_id,
                 sync_token=self.sync_token,
-                page_token=self.page_token,
+                page_token=page_token,
             )
             for event in response_list.get("items", []):
 
@@ -92,12 +90,12 @@ class Hall(GoogleModel):
                     event_obj.etag = event_etag
                     event_obj.save()
 
+            page_token = response_list.get("nextPageToken", None)
+            if page_token:
+                self.update_hall(api, page_token=page_token)
+
             sync_token = response_list.get("nextSyncToken", "")
             self.sync_token = sync_token
-
-            page_token = response_list.get("nextPageToken", None)
-            if page_token is not None:
-                self.page_token = page_token
             self.save()
 
         except Exception as e:
