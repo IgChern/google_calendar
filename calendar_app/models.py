@@ -72,8 +72,11 @@ class Hall(GoogleModel):
                 page_token=self.page_token,
             )
             for event in response_list.get("items", []):
+
                 start_time = event["start"].get("dateTime")
                 end_time = event["end"].get("dateTime")
+                event_etag = event["etag"]
+
                 event_obj, created = Event.objects.update_or_create(
                     event_hall=self,
                     google_id=event["id"],
@@ -81,17 +84,21 @@ class Hall(GoogleModel):
                         "event_company": self.hall_company,
                         "date_start": start_time,
                         "date_end": end_time,
+                        "etag": event_etag,
                     },
                 )
 
+                if created or event_obj.etag != event_etag:
+                    event_obj.etag = event_etag
+                    event_obj.save()
+
             sync_token = response_list.get("nextSyncToken", "")
             self.sync_token = sync_token
-            self.save()
 
             page_token = response_list.get("nextPageToken", None)
             if page_token is not None:
                 self.page_token = page_token
-                self.save()
+            self.save()
 
         except Exception as e:
             print(f"Error updating hall {self.name}: {e}")
@@ -114,6 +121,7 @@ class Event(GoogleModel):
     google_id = models.CharField(_("Event ID"), max_length=255, blank=True)
     date_start = models.DateTimeField(blank=True, null=True)
     date_end = models.DateTimeField(blank=True, null=True)
+    etag = models.CharField(_("etag"), max_length=255, blank=True)
     error = models.IntegerField(default=0)
 
     def check_overlapping_events(self):
