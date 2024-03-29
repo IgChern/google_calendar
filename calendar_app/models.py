@@ -11,6 +11,9 @@ class GoogleModel(models.Model):
     sync_token = models.CharField(
         _("Sync Token"), blank=True, default="", max_length=255
     )
+    page_token = models.CharField(
+        _("Page Token"), blank=True, default="", max_length=255
+    )
 
 
 class Company(GoogleModel):
@@ -19,9 +22,11 @@ class Company(GoogleModel):
     )
     name = models.CharField(_("Company Name"), max_length=255)
 
-    def update_company(self, api: GoogleCalendar):
+    def update_company(self, api: GoogleCalendar, page_token=None):
         try:
-            response_list = api.get_calendars_list(sync_token=self.sync_token)
+            response_list = api.get_calendars_list(
+                sync_token=self.sync_token, page_token=self.page_token
+            )
             for calendar in response_list.get("items", []):
                 hall, created = Hall.objects.get_or_create(
                     hall_company=self,
@@ -33,6 +38,11 @@ class Company(GoogleModel):
             sync_token = response_list.get("nextSyncToken", "")
             self.sync_token = sync_token
             self.save()
+
+            page_token = response_list.get("nextPageToken", None)
+            if page_token is not None:
+                self.page_token = page_token
+                self.save()
 
         except Exception as e:
             print(f"Error updating company {self.name}: {e}")
@@ -54,10 +64,12 @@ class Hall(GoogleModel):
         _("Google calendar ID"), max_length=255, blank=True
     )
 
-    def update_hall(self, api: GoogleCalendar):
+    def update_hall(self, api: GoogleCalendar, page_token=None):
         try:
             response_list = api.get_events(
-                cal_id=self.google_calendar_id, sync_token=self.sync_token
+                cal_id=self.google_calendar_id,
+                sync_token=self.sync_token,
+                page_token=self.page_token,
             )
             for event in response_list.get("items", []):
                 start_time = event["start"].get("dateTime")
@@ -75,6 +87,12 @@ class Hall(GoogleModel):
             sync_token = response_list.get("nextSyncToken", "")
             self.sync_token = sync_token
             self.save()
+
+            page_token = response_list.get("nextPageToken", None)
+            if page_token is not None:
+                self.page_token = page_token
+                self.save()
+
         except Exception as e:
             print(f"Error updating hall {self.name}: {e}")
 
