@@ -1,6 +1,7 @@
+import imp
 import logging
 
-from celery import shared_task
+from celery import group, shared_task
 from django.conf import settings
 from django.utils import timezone
 
@@ -11,16 +12,18 @@ logger = logging.getLogger("celery_tasks")
 
 
 @shared_task(bind=True)
-def sync_company_calendars():
-
+def sync_company_calendars(self):
+    company_tasks = []
     for company in Company.objects.all():
         company.last_update = timezone.now()
         company.save()
-        update_halls_and_events.apply_async(
+        task = update_halls_and_events.apply_async(
             kwargs={"company_id": company.pk},
             time_limit=settings.IMPORT_TIME,
         )
+        company_tasks.append(task)
         logger.info(f"Updating halls for company: {company.name}")
+    group(*company_tasks).apply_async()
 
 
 @shared_task

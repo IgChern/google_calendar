@@ -137,16 +137,14 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 GOOGLE_CREDENTIALS = "./calendar_app/credentials/credentials.json"
 GOOGLE_TOKEN = "./calendar_app/credentials/token.json"
 
-IMPORT_TIME = 120
+IMPORT_TIME = 10
 
 CELERY_BROKER_URL = "redis://redis:6379/0"
 CELERY_RESULT_BACKEND = "redis://redis:6379/0"
 
-# Максимальное количество воркеров
 CELERYD_CONCURRENCY = 1
-
-# Максимальное количество задач в очереди, которые может обрабатывать воркер
-CELERYD_MAX_TASKS_PER_CHILD = 3
+CELERYD_PREFETCH_MULTIPLIER = 1
+CELERYD_MAX_TASKS_PER_CHILD = 1
 
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
